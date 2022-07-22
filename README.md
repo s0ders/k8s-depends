@@ -13,7 +13,7 @@ The image accepts the following flags:
 
 Flag | Option | Default Value
 --- | --- | ---
-| `-t`, `--timeout` | Set the timeout in seconds for each service after which it is considered down | 60 |
+| `--timeout` | Set the timeout in seconds for each service after which it is considered down | 60 |
 
 The rest of the arguments passed to the program are the services in form `SERVICE_NAME:SERVICE_PORT` you want to wait for.
 
