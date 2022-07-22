@@ -34,12 +34,10 @@ func worker(service string, timeout int) {
 
 func main() {
 	timeoutOpt := flag.Int("timeout", 60, "Define how long should the program wait for each service to be available")
-	servicesOpt := flag.String("service", "", "Define a service to wait for before exiting, you can specify as many as you want")
-
+	
 	flag.Parse()
 
 	services := make([]string, 0)
-	services = append(services, *servicesOpt)
 	services = append(services, flag.Args()...)
 
 	var wg sync.WaitGroup
