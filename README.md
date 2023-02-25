@@ -1,4 +1,4 @@
-## "Depends" - Small K8S utility
+## Depends - K8S utility
 
 
 ### Motivations 
