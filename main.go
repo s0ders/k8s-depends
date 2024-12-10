@@ -1,55 +1,67 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
-	"log"
+	"fmt"
+	"log/slog"
 	"net"
-	"sync"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
-func worker(service string, timeout int) {
-	timer := time.NewTimer(time.Duration(timeout) * time.Second)
-	serviceAlive := false
-
-	for !serviceAlive {
-		_, err := net.Dial("tcp", service)
-		
-		if err != nil {
-			log.Printf("Service %s not available yet\n", service)
-			time.Sleep(1 * time.Second)
-		} else {
-			serviceAlive = true
-			log.Printf("Service %s is available\n", service)
-		}
-
+func worker(ctx context.Context, service string, sleep time.Duration) error {
+	for {
 		select {
-		case <-timer.C:
-			log.Fatalf("Service %s failed to respond within %d seconds\n", service, timeout)
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("service %q was not available before the timeout", service)
+			}
+
+			return fmt.Errorf("context was cancelled: %w", ctx.Err())
 		default:
-			continue
+			_, err := net.Dial("tcp", service)
+
+			if err == nil {
+				slog.Info(fmt.Sprintf("service %q is available", service))
+				return nil
+			}
+
+			time.Sleep(sleep * time.Second)
 		}
 	}
 }
 
 func main() {
-	timeoutOpt := flag.Int("timeout", 60, "Define how long should the program wait for each service to be available")
-	
+	timeoutOpt := flag.Int("timeout", 60, "How long, in seconds, should the program wait for each service to be available before timing out")
+	sleepOpt := flag.Int("sleep", 1, "How long, in seconds, each worker waits between two consecutive polls of a given service")
 	flag.Parse()
 
-	services := make([]string, 0)
-	services = append(services, flag.Args()...)
+	args := flag.Args()
+	services := make([]string, 0, len(args))
+	services = append(services, args...)
 
-	var wg sync.WaitGroup
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*timeoutOpt)*time.Second)
+	defer cancel()
+
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+
+	g, _ := errgroup.WithContext(ctx)
 
 	for _, service := range services {
-		wg.Add(1)
-
-		go func(service string) {
-			defer wg.Done()
-			worker(service, *timeoutOpt)
-		}(service)
+		g.Go(func() error {
+			return worker(ctx, service, time.Duration(*sleepOpt))
+		})
 	}
-	
-	wg.Wait()
+
+	if err := g.Wait(); err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
 }
