@@ -18,6 +18,13 @@ The image accepts the following flags:
 
 The rest of the arguments passed to the program are the services in form `SERVICE_NAME:SERVICE_PORT` you want to wait for.
 
+### Install
+
+This program is available as a Docker image and is hosted on Docker Hub:
+```bash
+$ docker pull s0ders/k8s-depends
+```
+
 ### Examples
 
 ```yaml
