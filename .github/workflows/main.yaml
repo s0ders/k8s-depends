@@ -69,10 +69,6 @@ jobs:
         uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           context: .
-          file: ./build/Dockerfile
+          file: ./Dockerfile
           push: true
-          build-args: |
-            APP_VERSION="${{ env.VERSION }}"
-            APP_BUILD_NUMBER="${{ github.run_id }}"
-            APP_COMMIT_HASH="${{ github.sha }}"
           tags: s0ders/k8s-depends:latest
